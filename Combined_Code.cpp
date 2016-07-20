@@ -4,6 +4,7 @@
 #include "stdio.h"
 #include <iostream>
 #include "math.h"
+#include <fstream>
 
 /*************************** Golgi Tendon Organ **********************************/
 class GolgiTendonOrgan
@@ -107,11 +108,11 @@ class MuscleOutput: public MuscleTwitch
 	double Fi,Fi_1;
 	double srate,Rthresh;
 	public:
-	MuscleOutput(double,double,double,double,double,double,double,double []);
+	MuscleOutput(double,int,double,double,double,double,double,double []);
 	double ForceOutput(double,double,int);	
 	void Srate();
 };
-MuscleOutput::MuscleOutput(double rt,double l,double ks,double kp,double b1,double xL0,double deT,double r[]):MuscleTwitch(r,l)
+MuscleOutput::MuscleOutput(double rt,int l,double ks,double kp,double b1,double xL0,double deT,double r[]):MuscleTwitch(r,l)
 {  /*Variable initialization. MuscleTwitch is also initialized with this.*/
    kse=ks;kpe=kp;b=b1;xL=xL0;
    T=deT; Fi_1=0;   srate=0;
@@ -214,55 +215,82 @@ int main()
 	double SIa;
 	double SIb;
 	double SII;
-	int spike;
+	int spike[1000];
+	std::ofstream f2;
+	f2.open("Musclefiberoutput.csv");
+	for(int i=0;i<1000;i++)
+	{	if(i<400)
+			spike[i]=1;
+		else
+			spike[i]=0;			
+		}	
 	/* Initialized all the modules. I don't know how you would call the function, nevertheless, assume spike is my 'spike' input. spike=1, no spike=0 */
 	int i=1;
+	x=2.0;xd=0.0;
 	while(i)
 	{
-		std::cin>>spike;
-		std::cin>>x; // current displacement.
-		std::cin>>xd; //current velocity.
-		Fout=fiber1->ForceOutput(x,xd,spike);
-		std::cin>>g; //current Gamma
-		std::cin>>F; //current force on the GTO.
+		std::cout<<"Enter the spike:";
+	//	std::cin>>spike;
+		std::cout<<"Enter the displacement";
+	//	std::cin>>x; // current displacement
+		std::cout<<"Enter the velocity";
+	//	std::cin>>xd; //current velocity
+		Fout=fiber1->ForceOutput(x,xd,spike[i-1]);
+		f2<<Fout;
+		f2<<"\n";
+	//	std::cin>>g; //current Gamma
+	//	std::cin>>F; //current force on the GTO.
 		/* spindle1.Update(x,xd,g);
 		SIa=spindle1.Primary();
 		SII=spindle1.Secondary();
 		SIb=gto1.current_spikerate(F);  These four lines can be replaced by using:*/ 
-		GetSpikeRates(SIa,SII,SIb,x,xd,F,g);
+	//	GetSpikeRates(SIa,SII,SIb,x,xd,F,g);
 		
 		/* Now we have spike rates. These functions and classes can be used directly with some spinnaker functions, in which case 'cin' will be replaced by addSpike() or something. Use the pointers however required. Call the above function to store the spike rates in the pointer.*/
 		/*One line here for a condition which detects when to shut down the system: set i to 0. For now, it is taken from the user.*/
-		std::cin>>i;
+	//	std::cout<<"Would you like to continue? 1:yes, 0:no";
+	//	std::cin>>i;
+	i++;
+	if(i>1000)
+		break;
 		
 	}
+	f2.close();
 	return 0;
 	
 }
 void muscle_init(GolgiTendonOrgan &gto,MuscleOutput *mo,StaticBag &fib)
 {
-	std::cout<<"Enter the initialization for GTO";
+	std::cout<<"Enter the initialization for GTO in this order:";
+	std::ifstream f1;
+	f1.open("GTOval.csv");
 	double *val,*resp;
 	val=new double[10];
 	for(int i=0;i<10;i++)
-		std::cin>>val[i];
+		f1>>val[i];
 	gto.GTO_initialize(val[0],val[1],val[2],val[3],val[4],val[5],val[6], val[7],val[8],val[9]); // GTO initialized.
-	delete [] val;
+	f1.close();
+	delete[] val;
 	val= new double[7];
+	f1.open("Muscval.csv");
 	for(int i=0;i<7;i++)
-		std::cin>>val[i];
+		f1>>val[i];
 	int i=val[1];
 	resp=new double[i];
+	f1.close();f1.open("twitch.csv");
 	for(int i=0;i<val[1];i++)
-		std::cin>>resp[i];
+		f1>>resp[i];
 		
 	fiber1=new MuscleOutput(val[0],val[1],val[2],val[3],val[4],val[5],val[6],resp); //Muscle output initialized.
-	delete [] val;
+	delete[] val;
 	delete [] resp;
+	f1.close();
 	val=new double[8];
+	f1.open("spin_init.csv");
 	for(int i=0;i<8;i++)
-		std::cin>>val[i];
+		f1>>val[i];
 	fib.Bag_init(val[0],val[1],val[2],val[3],val[4],val[5],val[6],val[7]); // Spindle initialized.
+	f1.close();
 	
 	/* The most crudest way of initialization (according to me) has been implemented. */
 }
