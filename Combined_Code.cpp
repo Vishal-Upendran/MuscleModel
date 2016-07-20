@@ -221,7 +221,7 @@ void main()
 		std::cin>>spike;
 		std::cin>>x; // current displacement.
 		std::cin>>xd; //current velocity.
-		Fout=fiber1.ForceOutput(x,xd,spike);
+		Fout=fiber1.ForceOutput(x,xd,spike); // ForceOutput() converts spikes to force
 		std::cin>>g; //current Gamma
 		std::cin>>F; //current force on the GTO.
 		/* spindle1.Update(x,xd,g);
@@ -229,7 +229,7 @@ void main()
 		SII=spindle1.Secondary();
 		SIb=gto1.current_spikerate(F);  These four lines can be replaced by using:*/ 
 		GetSpikeRates(&SIa,&SII,&SIb,x,xd,F,g);
-		
+		//GetSpikeRates() gives spike rate from 3 afferents, given length, velocity and Force.
 		/* Now we have spike rates. These functions and classes can be used directly with some spinnaker functions, in which case 'cin' will be replaced by addSpike() or something. Use the pointers however required. Call the above function to store the spike rates in the pointer.*/
 		/*One line here for a condition which detects when to shut down the system: set i to 0. For now, it is taken from the user.*/
 		std::cin>>i;
