@@ -1,6 +1,6 @@
 /* Here, I have included 1 muscle fiber, 1 GTO, 1 muscle spindle. The muscle fiber needs spikes for communication, and it forms one module. Spindle and GTO form one module, which emit Ia, Ib and II afferent spike rates. So basically, fibers will input spikes, whereas spindle and GTO will give spike rate.*/
 /*One more thing: I have included everything as classes here, not as #includables, to make the code contained in one file.*/
-
+/*EDIT 3: The code compiles. But I its frustrating to enter these many parameter values. I will enter, check the result and update */
 #include "stdio.h"
 #include <iostream>
 #include "math.h"
@@ -16,19 +16,19 @@ class GolgiTendonOrgan
     double srate_now,srate_prev,srate_pprev;
     void discrete_initialize(); // Initialize l0,l1..... from a,b....
     public:
-    void GTO_initialize(double,double,double,double,double,double,double,double,double); // Constructor
+    void GTO_initialize(double,double,double,double,double,double,double,double,double,double); // Constructor
     double current_spikerate(double); //Gives the spike rate for the force input.
 };
 void GolgiTendonOrgan::GTO_initialize(double sb,double sSat,double K1,double F0,double Fn,double slower,double A1, double faster,double B1,double SampleT)
 {	//Initializer.
-    K=K1, // gain
+    K=K1,
     F_thresh=F0; //threshold force
     F_saturate=Fn; //saturation force
-    a=slower; //exponential
-    A=A1; //coefficient of 'a'
-    b=faster; //exponential
-    B=B1; // coefficient of 'b'
-    T=SampleT; // sample time
+    a=slower; //slower exponential
+    A=A1; //coefficient of a
+    b=faster; //faster exp
+    B=B1; //coefficient of b
+    T=SampleT; //sampling time
 	sbaseline=sb; //baseline firing
 	sSaturate=sSat; //saturation firing
     Fi_1=Fi_2=srate_prev=srate_pprev=0.0;
@@ -67,14 +67,14 @@ class MuscleTwitch
 {
 	private:
 	double *Impulse_response; //Create a lookup table at initialization
-	int *spiketrain,window_size; //A spike train of size Delta_T/Sampling time.
 	public:
-	void Twitch_init(double*,int); //Constructor
+	int *spiketrain,window_size; //A spike train of size Delta_T/Sampling time.
+	MuscleTwitch(double*,int); //Constructor
 	double GetTwitch(int spike); //Gives the response at current time.
 	void UpdateSpike(int); //Updates the spike window
 	~MuscleTwitch(){delete[] spiketrain;delete[] Impulse_response;} //Destructor of the system.
 };
-void MuscleTwitch::Twitch_init(double Response[], int length)
+MuscleTwitch::MuscleTwitch(double Response[], int length)
 { /* Constructor function: Initialize impulse response to the given data. And spike train to zeros(1,Delta_T) */
    Impulse_response=new double[length];
    spiketrain=new int[length];
@@ -107,15 +107,15 @@ class MuscleOutput: public MuscleTwitch
 	double Fi,Fi_1;
 	double srate,Rthresh;
 	public:
-	void MuscleOutput_init(double,double,double,double,double,double,double []);
+	MuscleOutput(double,double,double,double,double,double,double,double []);
 	double ForceOutput(double,double,int);	
 	void Srate();
 };
-void MuscleOutput::MuscleOutput_init(double rt,int l,double ks,double kp,double b1,double xL0,double deT,double r[]):MuscleTwitch(r,l)
+MuscleOutput::MuscleOutput(double rt,double l,double ks,double kp,double b1,double xL0,double deT,double r[]):MuscleTwitch(r,l)
 {  /*Variable initialization. MuscleTwitch is also initialized with this.*/
    kse=ks;kpe=kp;b=b1;xL=xL0;
    T=deT; Fi_1=0;   srate=0;
-   Rthresh=rt
+   Rthresh=rt;
 }
 double MuscleOutput::ForceOutput(double x1,double xd,int spike)
 {   /*Gives the force output. For the equation, please refer to the report. */
@@ -143,7 +143,7 @@ class StaticBag
 	float Fi,Fi_1;
 	float Ia,II;
 	public:
-	void Bag_init(float,float,float,float,float,float,float);
+	void Bag_init(float,float,float,float,float,float,float,float);
 	void Update(float,float,float);
 	void Update(float,float);	
 	double Primary();
@@ -201,45 +201,48 @@ double StaticBag::Secondary()
 
 /*-----*/
 GolgiTendonOrgan gto1;
-MuscleOutput fiber1;
+MuscleOutput *fiber1;
 StaticBag spindle1;
 /*------------------------- All objects defined. Now to write the main program that will actuate them -------------------*/
-void muscle_init(GolgiTendonOrgan &,MuscleOutput &,StaticBag &);
+void muscle_init(GolgiTendonOrgan &,MuscleOutput *,StaticBag &);
 void GetSpikeRates(double &,double &,double &,double,double,double,double);
 
-void main()
+int main()
 {
-	muscle_init(&gto1,&fiber1,&spindle1);
+	muscle_init(gto1,fiber1,spindle1);
 	double x,xd,g,F,Fout;
 	double SIa;
 	double SIb;
 	double SII;
-	/* Initialized all the modules. I don't know how you would call the function, nevertheless, assume spike is my 'spike' input. spiking=1, no spike=0 */
+	int spike;
+	/* Initialized all the modules. I don't know how you would call the function, nevertheless, assume spike is my 'spike' input. spike=1, no spike=0 */
 	int i=1;
 	while(i)
 	{
 		std::cin>>spike;
 		std::cin>>x; // current displacement.
 		std::cin>>xd; //current velocity.
-		Fout=fiber1.ForceOutput(x,xd,spike); // ForceOutput() converts spikes to force
+		Fout=fiber1->ForceOutput(x,xd,spike);
 		std::cin>>g; //current Gamma
 		std::cin>>F; //current force on the GTO.
 		/* spindle1.Update(x,xd,g);
 		SIa=spindle1.Primary();
 		SII=spindle1.Secondary();
 		SIb=gto1.current_spikerate(F);  These four lines can be replaced by using:*/ 
-		GetSpikeRates(&SIa,&SII,&SIb,x,xd,F,g);
-		//GetSpikeRates() gives spike rate from 3 afferents, given length, velocity and Force.
+		GetSpikeRates(SIa,SII,SIb,x,xd,F,g);
+		
 		/* Now we have spike rates. These functions and classes can be used directly with some spinnaker functions, in which case 'cin' will be replaced by addSpike() or something. Use the pointers however required. Call the above function to store the spike rates in the pointer.*/
 		/*One line here for a condition which detects when to shut down the system: set i to 0. For now, it is taken from the user.*/
 		std::cin>>i;
 		
 	}
+	return 0;
 	
 }
-void muscle_init(GolgiTendonOrgan &gto,MuscleOutput &mo,StaticBag &fib)
+void muscle_init(GolgiTendonOrgan &gto,MuscleOutput *mo,StaticBag &fib)
 {
 	std::cout<<"Enter the initialization for GTO";
+	double *val,*resp;
 	val=new double[10];
 	for(int i=0;i<10;i++)
 		std::cin>>val[i];
@@ -248,10 +251,12 @@ void muscle_init(GolgiTendonOrgan &gto,MuscleOutput &mo,StaticBag &fib)
 	val= new double[7];
 	for(int i=0;i<7;i++)
 		std::cin>>val[i];
-	resp=new double[val[1]];
+	int i=val[1];
+	resp=new double[i];
 	for(int i=0;i<val[1];i++)
 		std::cin>>resp[i];
-	mo.MuscleOutput_init(val[0],val[1],val[2],val[3],val[4],val[5],val[6],resp); //Muscle output initialized.
+		
+	fiber1=new MuscleOutput(val[0],val[1],val[2],val[3],val[4],val[5],val[6],resp); //Muscle output initialized.
 	delete [] val;
 	delete [] resp;
 	val=new double[8];
