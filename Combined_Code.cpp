@@ -2,7 +2,7 @@
 /*One more thing: I have included everything as classes here, not as #includables, to make the code contained in one file.*/
 
 #include "stdio.h"
-#include "iostream.h"
+#include <iostream>
 #include "math.h"
 
 /*************************** Golgi Tendon Organ **********************************/
@@ -21,16 +21,16 @@ class GolgiTendonOrgan
 };
 void GolgiTendonOrgan::GTO_initialize(double sb,double sSat,double K1,double F0,double Fn,double slower,double A1, double faster,double B1,double SampleT)
 {	//Initializer.
-    K=K1,
-    F_thresh=F0;
-    F_saturate=Fn;
-    a=slower;
-    A=A1;
-    b=faster;
-    B=B1;
-    T=SampleT;
-	sbaseline=sb;
-	sSaturate=sSat;
+    K=K1, // gain
+    F_thresh=F0; //threshold force
+    F_saturate=Fn; //saturation force
+    a=slower; //exponential
+    A=A1; //coefficient of 'a'
+    b=faster; //exponential
+    B=B1; // coefficient of 'b'
+    T=SampleT; // sample time
+	sbaseline=sb; //baseline firing
+	sSaturate=sSat; //saturation firing
     Fi_1=Fi_2=srate_prev=srate_pprev=0.0;
     discrete_initialize();
 }
@@ -214,7 +214,7 @@ void main()
 	double SIa;
 	double SIb;
 	double SII;
-	/* Initialized all the modules. I don't know how you would call the function, nevertheless, assume spike is my 'spike' input. spike=1, no spike=0 */
+	/* Initialized all the modules. I don't know how you would call the function, nevertheless, assume spike is my 'spike' input. spiking=1, no spike=0 */
 	int i=1;
 	while(i)
 	{
