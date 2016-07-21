@@ -2,6 +2,7 @@
 /*One more thing: I have included everything as classes here, not as #includables, to make the code contained in one file.*/
 /*EDIT 3: The code compiles. But I its frustrating to enter these many parameter values. I will enter, check the result and update */
 /*EDIT 4: The muscle works! The .csv files had to be columnwise to be accessed properly, and random pointers have been removed. */
+/* EDIT 5: Everything works. Minor bugs might be here and there. Still scanvenging for bugs */
 //#include "stdio.h"
 #include <iostream>
 #include "math.h"
@@ -48,12 +49,12 @@ void GolgiTendonOrgan::discrete_initialize()
 }
 double GolgiTendonOrgan::current_spikerate(double Fi)
 {	/*First step: Saturation and Threshold forces. Force less than threshold causes no change in baseline firing, and force above saturation causes no change in firing rate.*/
-    if(Fi>=F_saturate)
+  /*  if(Fi>=F_saturate)
     Fi=F_saturate;
     else if(Fi<=F_thresh)
     Fi=0.0;
-    else    
-    {	Fi=Fi-F_thresh;
+    else    */
+    {	//Fi=Fi-F_thresh;
 		srate_now=(K*10*(l0*Fi+l1*Fi_1+l2*Fi_2)-d1*srate_prev-d2*srate_pprev)/d0;
 	}
     
@@ -213,20 +214,30 @@ void GetSpikeRates(double &,double &,double &,double,double,double,double);
 int main()
 {
 	muscle_init(gto1,fiber1,spindle1);
-	double x,xd,g,F,Fout;
+	double x,x2[1000],xd,xd2[1000],g,F,Fout;
 	double SIa;
 	double SIb;
 	double SII;
 	int spike[1000];
-	std::ofstream f2;
+	std::ofstream f2,f3,f4,f5;
 	f2.open("Musclefiberoutput.csv");
+	f3.open("SIa.csv");
+	f4.open("SII.csv");
+	f5.open("GT.csv");
 	spike[0]=1;
+	x2[0]=0.0;xd2[0]=0.0;
 	for(int i=1;i<1000;i++)
 	{	//if(i<400)
 		//	spike[i]=1;
 		//else
-			spike[i]=0;			
-		}	
+			spike[i]=0;	
+			if(i<400)		
+			x2[i]=i/4;
+			else
+			x2[i]=100.0;
+			xd2[i]=(x2[i]-x2[i-1])/0.001;
+		}
+	g=0;
 	/* Initialized all the modules. I don't know how you would call the function, nevertheless, assume spike is my 'spike' input. spike=1, no spike=0 */
 	int i=1;
 	x=2.0;xd=0.0;
@@ -242,15 +253,17 @@ int main()
 		Fout=fiber1->ForceOutput(x,xd,spike[i-1]);
 		f2<<Fout;
 		f2<<"\n";
-		
+		F=i/4;
 	//	std::cin>>g; //current Gamma
 	//	std::cin>>F; //current force on the GTO.
-		/* spindle1.Update(x,xd,g);
+		spindle1.Update(x2[i],xd2[i],g);
 		SIa=spindle1.Primary();
 		SII=spindle1.Secondary();
-		SIb=gto1.current_spikerate(F);  These four lines can be replaced by using:*/ 
-	//	GetSpikeRates(SIa,SII,SIb,x,xd,F,g);
-		
+		SIb=gto1.current_spikerate(F);  /*These four lines can be replaced by using:*/ 
+		GetSpikeRates(SIa,SII,SIb,x,xd,F,g);
+		f3<<SIa<<"\n";
+		f4<<SII<<"\n";
+		f5<<SIb<<"\n";
 		/* Now we have spike rates. These functions and classes can be used directly with some spinnaker functions, in which case 'cin' will be replaced by addSpike() or something. Use the pointers however required. Call the above function to store the spike rates in the pointer.*/
 		/*One line here for a condition which detects when to shut down the system: set i to 0. For now, it is taken from the user.*/
 	//	std::cout<<"Would you like to continue? 1:yes, 0:no";
@@ -261,6 +274,9 @@ int main()
 		
 	}
 	f2.close();
+	f3.close();
+	f4.close();
+	f5.close();
 	delete fiber1;
 	return 0;
 	
