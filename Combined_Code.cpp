@@ -1,7 +1,8 @@
 /* Here, I have included 1 muscle fiber, 1 GTO, 1 muscle spindle. The muscle fiber needs spikes for communication, and it forms one module. Spindle and GTO form one module, which emit Ia, Ib and II afferent spike rates. So basically, fibers will input spikes, whereas spindle and GTO will give spike rate.*/
 /*One more thing: I have included everything as classes here, not as #includables, to make the code contained in one file.*/
 /*EDIT 3: The code compiles. But I its frustrating to enter these many parameter values. I will enter, check the result and update */
-#include "stdio.h"
+/*EDIT 4: The muscle works! The .csv files had to be columnwise to be accessed properly, and random pointers have been removed. */
+//#include "stdio.h"
 #include <iostream>
 #include "math.h"
 #include <fstream>
@@ -122,13 +123,14 @@ double MuscleOutput::ForceOutput(double x1,double xd,int spike)
 {   /*Gives the force output. For the equation, please refer to the report. */
 	double Twitch_t=GetTwitch(spike)/Rthresh; //Current twitch
 	x=x1;x_dot=xd;
-	if(srate>=Rthresh) //Minimum rate required to produce the force.
-		Fi=((kse*kpe/b)*(x-xL)+kse*x_dot)*T+(kse/b)*Twitch_t+Fi_1*(1.0-(kse+kpe)*T/b);
-	else
-		Fi=0;
+	Fi=((kse*kpe/b)*(x-xL)+kse*x_dot)*T+(kse/b)*Twitch_t+Fi_1*(1.0-(kse+kpe)*T/b);
 	Fi_1=Fi;
 	return Fi;
 }
+/*void MusclOutput::Disp()
+{
+	cout<<kse<<":"<<kpe<<":"<<b<<":"<<xL<<":"<<T<<":"<<Fi_1<<":"<<srate<<":"<<Rthresh;
+}*/
 void MuscleOutput::Srate()
 {	// Calculate the spike rate. This is not requried if the Force function is modified to input spike rate separately.
 	if(spiketrain[window_size-1]==1)
@@ -218,10 +220,11 @@ int main()
 	int spike[1000];
 	std::ofstream f2;
 	f2.open("Musclefiberoutput.csv");
-	for(int i=0;i<1000;i++)
-	{	if(i<400)
-			spike[i]=1;
-		else
+	spike[0]=1;
+	for(int i=1;i<1000;i++)
+	{	//if(i<400)
+		//	spike[i]=1;
+		//else
 			spike[i]=0;			
 		}	
 	/* Initialized all the modules. I don't know how you would call the function, nevertheless, assume spike is my 'spike' input. spike=1, no spike=0 */
@@ -229,15 +232,17 @@ int main()
 	x=2.0;xd=0.0;
 	while(i)
 	{
-		std::cout<<"Enter the spike:";
-	//	std::cin>>spike;
+	/*	std::cout<<"Enter the spike:";
+		std::cin>>spike;
 		std::cout<<"Enter the displacement";
-	//	std::cin>>x; // current displacement
+		std::cin>>x; // current displacement
 		std::cout<<"Enter the velocity";
-	//	std::cin>>xd; //current velocity
+		std::cin>>xd; //current velocity*/
+		
 		Fout=fiber1->ForceOutput(x,xd,spike[i-1]);
 		f2<<Fout;
 		f2<<"\n";
+		
 	//	std::cin>>g; //current Gamma
 	//	std::cin>>F; //current force on the GTO.
 		/* spindle1.Update(x,xd,g);
@@ -256,6 +261,7 @@ int main()
 		
 	}
 	f2.close();
+	delete fiber1;
 	return 0;
 	
 }
@@ -264,31 +270,47 @@ void muscle_init(GolgiTendonOrgan &gto,MuscleOutput *mo,StaticBag &fib)
 	std::cout<<"Enter the initialization for GTO in this order:";
 	std::ifstream f1;
 	f1.open("GTOval.csv");
-	double *val,*resp;
-	val=new double[10];
+	double dummy=0.0;
+	double val[10];
+	double resp[600];
 	for(int i=0;i<10;i++)
-		f1>>val[i];
+	{	f1>>val[i];
+		std::cout<<dummy<<":: "<<"\t";
+		}
+	std::cout<<"\n"	;
 	gto.GTO_initialize(val[0],val[1],val[2],val[3],val[4],val[5],val[6], val[7],val[8],val[9]); // GTO initialized.
 	f1.close();
-	delete[] val;
-	val= new double[7];
+	//delete[] val;
+	//val= new double[7];
+	std::cout<<"Enter the initialization for GTO in this order:";
 	f1.open("Muscval.csv");
 	for(int i=0;i<7;i++)
-		f1>>val[i];
+	{	f1>>val[i];
+		std::cout<<val[i]<<":: "<<dummy<<"\t";
+		}	
+		std::cout<<"\n"	;
 	int i=val[1];
-	resp=new double[i];
-	f1.close();f1.open("twitch.csv");
-	for(int i=0;i<val[1];i++)
-		f1>>resp[i];
-		
-	fiber1=new MuscleOutput(val[0],val[1],val[2],val[3],val[4],val[5],val[6],resp); //Muscle output initialized.
-	delete[] val;
-	delete [] resp;
 	f1.close();
-	val=new double[8];
+	f1.open("twitch.csv");
+	std::cout<<"Enter the initialization for GTO in this order:";
+	for(int i=0;i<val[1];i++)
+	{	f1>>resp[i];
+		std::cout<<resp[i]<<":: "<<dummy<<"\t";
+		}	
+		
+	std::cout<<"\n"	;
+	fiber1=new MuscleOutput(val[0],val[1],val[2],val[3],val[4],val[5],val[6],resp); //Muscle output initialized.
+//	delete[] val;
+//	delete [] resp;
+	f1.close();
+//	val=new double[8];
+	std::cout<<"Enter the initialization for GTO in this order:";
 	f1.open("spin_init.csv");
 	for(int i=0;i<8;i++)
-		f1>>val[i];
+	{	f1>>val[i];
+		std::cout<<val[i]<<":: "<<dummy<<"\t";
+		}	
+		std::cout<<"\n"	;
 	fib.Bag_init(val[0],val[1],val[2],val[3],val[4],val[5],val[6],val[7]); // Spindle initialized.
 	f1.close();
 	
